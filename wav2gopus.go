@@ -7,10 +7,10 @@ import (
 )
 
 const wav_header_size = 44
-const sampleRate = 24000 // VOICEVOX SampleRate
-const channels = 1       // VOICEVOX Audio Channel
-const frameSizeMs = 20
-const frameSize = sampleRate * frameSizeMs / 1000
+// const sampleRate = 24000 // VOICEVOX SampleRate
+// const channels = 1       // VOICEVOX Audio Channel
+// const frameSizeMs = 20
+// const frameSize = sampleRate * frameSizeMs / 1000
 
 func Encoder(adapter *opusv2.Encoder, channel *chan []byte, wav []byte, opusFrameSize int) error {
 	var length int
