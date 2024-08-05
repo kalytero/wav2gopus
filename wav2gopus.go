@@ -7,6 +7,7 @@ import (
 )
 
 const wav_header_size = 44
+
 // const sampleRate = 24000 // VOICEVOX SampleRate
 // const channels = 1       // VOICEVOX Audio Channel
 // const frameSizeMs = 20
