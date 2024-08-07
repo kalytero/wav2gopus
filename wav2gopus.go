@@ -26,6 +26,8 @@ func Encoder(wav_raw []byte, opus_dst *chan []byte, opus_sample_rate int) error 
 	// wav to pcm
 	pcm_i16, pcm_len = wav_to_pcm(wav_raw)
 	pcm_i16, pcm_len = pcm_resample(pcm_i16, pcm_len, wav_sample_rate, opus_sample_rate)
+	pcm_i16, pcm_len = pcm_mono_to_streo(pcm_i16, pcm_len)
+
 	// pcm to opus & send to channel
 	err = pcm_to_opus(pcm_i16, pcm_len, opus_dst, opus_sample_rate)
 	if err != nil {
@@ -60,9 +62,11 @@ func pcm_resample(src_pcm []int16, pcm_len, src_rate, dst_rate int) ([]int16, in
 	var r_value float64
 	var interpolation float64
 
+	if (src_rate == dst_rate) || (pcm_len == 0) {
+		return src_pcm, pcm_len
+	}
 	rate_ratio = float64(dst_rate) / float64(src_rate)
 	dst_pcm = make([]int16, int(float64(pcm_len)*rate_ratio))
-
 	for i := 0; i < len(dst_pcm); i++ {
 		src_index = float64(i) / rate_ratio
 		l_index = int(src_index)
@@ -88,11 +92,12 @@ func pcm_to_opus(pcm_i16 []int16, pcm_len int, opus_dst *chan []byte, opus_sampl
 	var end int
 	var err error
 
-	opus_encoder, err = Opus.NewEncoder(opus_sample_rate, 1, Opus.AppVoIP)
+	opus_encoder, err = Opus.NewEncoder(opus_sample_rate, 2, Opus.AppRestrictedLowdelay)
+	opus_encoder.SetBitrateToMax()
 	if err != nil {
 		return fmt.Errorf("%s(%d) %s", Macro.M__FILE__(), Macro.M__LINE__(), err.Error())
 	}
-	opus_frame_size = opus_sample_rate * 20 / 1000
+	opus_frame_size = opus_sample_rate * 20 / 1000 * 2
 	opus_ui8 = make([]byte, opus_frame_size*2)
 	for i := 0; i < pcm_len; i += opus_frame_size {
 		if i+opus_frame_size > pcm_len {
@@ -107,4 +112,17 @@ func pcm_to_opus(pcm_i16 []int16, pcm_len int, opus_dst *chan []byte, opus_sampl
 		*opus_dst <- opus_ui8[:opus_frame_len]
 	}
 	return nil
+}
+
+func pcm_mono_to_streo(pcm_mono []int16, pcm_len int) ([]int16, int) {
+	var pcm_stereo_len = pcm_len * 4
+	var pcm_stereo = make([]int16, pcm_stereo_len)
+
+	for i := 0; i < pcm_len; i++ {
+		sample := pcm_mono[i]
+		pcm_stereo[i*2] = sample
+		pcm_stereo[i*2+1] = sample
+	}
+
+	return pcm_stereo, len(pcm_stereo)
 }
